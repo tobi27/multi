@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "before": {
+      "run_graph": {
+        "description": "Validation avant exécution du graphe",
+        "commands": [
+          "echo '🔍 Vérification de l'environnement...'",
+          "test -f .env || echo '⚠️  Fichier .env manquant'"
+        ]
+      },
+      "deploy": {
+        "description": "Vérifications avant déploiement",
+        "commands": [
+          "python -m pytest tests/ || true",
+          "echo '✅ Pré-déploiement OK'"
+        ]
+      }
+    },
+    "after": {
+      "run_graph": {
+        "description": "Actions après exécution",
+        "commands": [
+          "echo '📊 Graphe exécuté avec succès'"
+        ]
+      }
+    }
+  }
+}

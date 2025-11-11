@@ -1,0 +1,24 @@
+{
+  "commands": [
+    {
+      "name": "run-graph",
+      "description": "Exécute le graphe d'agents LangGraph",
+      "command": "python run_graph.py"
+    },
+    {
+      "name": "check-deps",
+      "description": "Vérifie les dépendances installées",
+      "command": "pip list | grep -E '(langgraph|langchain|pydantic)'"
+    },
+    {
+      "name": "test-offline",
+      "description": "Teste le mode offline",
+      "command": "MODE=offline python run_graph.py"
+    },
+    {
+      "name": "test-llm",
+      "description": "Teste le mode LLM",
+      "command": "MODE=llm python run_graph.py"
+    }
+  ]
+}
