@@ -4,7 +4,7 @@ Real LLM compute tracking via Anthropic API.
 import os
 
 
-def llm_job(prompt: str, model="claude-3-5-sonnet-20241022"):
+def llm_job(prompt: str, model="claude-3-haiku-20240307"):
     """
     Execute LLM job with real Anthropic API call.
     Returns dict with tokens, flops, and text response.
