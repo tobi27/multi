@@ -43,7 +43,7 @@ def tool_producer_csv(state: GraphState)->GraphState:
     return state
 
 def tool_producer_llm(state: GraphState)->GraphState:
-    res = llm_job("Clean and normalize the last 100 rows to the target schema.")
+    res = llm_job("Clean and normalize the last 100 rows to the target schema.", token_cap=state.quota_tokens if state.quota_tokens>0 else None)
     if not res: return state
     state.tokens_used += res["tokens"]
     state.total_flops += res["flops"]

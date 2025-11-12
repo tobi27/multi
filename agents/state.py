@@ -64,6 +64,8 @@ class GraphState(BaseModel):
     signature_b64: Optional[str] = None
     verify_key_b64: Optional[str] = None
     passed: Optional[bool] = None
+    quota_tokens: int = 0
+    fitness_eta: Optional[float] = None
 
     def finalize(self):
         pf = self.total_flops / 1e15
