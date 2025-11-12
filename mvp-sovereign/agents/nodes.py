@@ -189,12 +189,12 @@ def accountant_node(state: AgentState) -> AgentState:
     agent_net = agdp - platform_revenue - premium + claim
 
     # Validation: GDP/PFLOP > 0 ET Agent NET > 0
-    passed = (gdp_per_pflop > 0) and (agent_net > 0)
+    passed = bool((gdp_per_pflop > 0) and (agent_net > 0))
 
     # Mise à jour des métriques comptables
-    ledger.accounting.pflops = pflops
-    ledger.accounting.gdp_per_pflop = gdp_per_pflop
-    ledger.accounting.agent_net = agent_net
+    ledger.accounting.pflops = float(pflops)
+    ledger.accounting.gdp_per_pflop = float(gdp_per_pflop)
+    ledger.accounting.agent_net = float(agent_net)
     ledger.accounting.passed = passed
 
     # Génération du receipt (hash SHA-256 du ledger)
