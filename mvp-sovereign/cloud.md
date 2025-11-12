@@ -1,8 +1,19 @@
 # Mémoire Projet - MVP Sovereign
 
+## OBJECTIF DU PROJET
+
+Démontrer en live que des agents IA, identifiés et assurés, génèrent un **AGDP net positif** et un **GDP/PFLOP > 0**.
+
+**Preuve** = exécution instrumentée + ledger signé (SHA-256) + métriques financières.
+
+### Contexte
+Audience: CEO/Deputy intéressés par "**algorithmic sovereignty**" = valeur nette par unité de compute.
+
+On mesure les **FLOPs réels** (matmuls), on convertit la production en € via Δaccuracy (%), on applique assurance (prime/claim) + monétisation (take-rate).
+
 ## RÈGLES MVP SOVEREIGN (Claude Code)
 
-### Objectif
+### Objectif Technique
 Démontrer **"GDP/PFLOP > 0"** + **"Agent NET > 0"** avec ledger SHA-256.
 
 ### Graphe d'Agents (LangGraph)
@@ -42,6 +53,12 @@ Chaque exécution DOIT produire:
 - `PASSED` (bool) - Validation des critères
 - `RECEIPT` (SHA-256) - Hash du ledger
 
+### Contraintes Techniques
+- 🔒 **Déterministe**: Seed fixe pour reproductibilité
+- 🔒 **Pas d'appels réseau**: Hors démo (mode offline)
+- 🔒 **Code court**: Auditable, sans yolo mode
+- 🔒 **FLOPs exacts**: Comptage précis des matmuls
+
 ### Interdictions
 - ❌ Packages lourds (TensorFlow, PyTorch, etc.)
 - ❌ Network calls non nécessaires
@@ -52,6 +69,7 @@ Chaque exécution DOIT produire:
 - ✅ **Exécutable**: Code fonctionnel à chaque commit
 - ✅ **Mesurable**: Toutes les métriques loggées
 - ✅ **Reproductible**: Seed fixe, résultats déterministes
+- ✅ **Auditable**: Code court et transparent
 
 ## Architecture Technique
 
