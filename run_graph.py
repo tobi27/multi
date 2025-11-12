@@ -32,11 +32,11 @@ def build_graph():
 def summary(o: GraphState):
     print(json.dumps(o.model_dump(), indent=2))
     print("\nSUMMARY:")
-    print(f"AGDP €={o.agdp_eur:.2f} | PFLOPs={o.total_flops/1e15:.6e} | GDP/PFLOP €={o.gdp_per_pflop_eur}")
-    print(f"ComputeCost €={o.compute_cost_eur} | CRI={o.cri}")
-    print(f"Premium={o.premium_eur} | Claim={o.claim_eur} | TakeRate={o.platform_revenue_eur}")
-    print(f"Royalties={o.royalties_eur} | LoanRepay={o.loans_repaid_eur}")
-    print(f"NET €={o.agent_net_eur} | PASSED={o.passed}")
+    print(f"AGDP $={o.agdp_usd:.2f} | PFLOPs={o.total_flops/1e15:.6e} | GDP/PFLOP $={o.gdp_per_pflop_usd}")
+    print(f"ComputeCost $={o.compute_cost_usd} | CRI={o.cri}")
+    print(f"Premium={o.premium_usd} | Claim={o.claim_usd} | TakeRate={o.platform_revenue_usd}")
+    print(f"Royalties={o.royalties_usd} | LoanRepay={o.loans_repaid_usd}")
+    print(f"NET $={o.agent_net_usd} | PASSED={o.passed}")
     print(f"RECEIPT={o.receipt[:16]}… | SIG={(o.signature_b64 or '')[:12]}…")
     print(f"AnthropicUsageID={o.anthropic_usage_id} | StripePI={o.stripe_payment_intent_id}")
 
@@ -59,8 +59,8 @@ def run_parallel(N=30):
             out = GraphState(**result)
         else:
             out = result
-        nets.append(out.agent_net_eur)
-        if out.gdp_per_pflop_eur is not None: gdp_pflops.append(out.gdp_per_pflop_eur)
+        nets.append(out.agent_net_usd)
+        if out.gdp_per_pflop_usd is not None: gdp_pflops.append(out.gdp_per_pflop_usd)
         if out.cri is not None: cris.append(out.cri)
     p50_net = statistics.median(nets)
     p95_net = sorted(nets)[int(0.95*len(nets))-1]

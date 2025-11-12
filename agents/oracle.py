@@ -12,5 +12,5 @@ def load_oracle():
     return {
         "delta_kpi_pct": float(data.get("delta_kpi_pct", 0.0)),
         "tokens_used": int(data.get("tokens_used", 0)),
-        "override_agdp_eur": data.get("override_agdp_eur", None),
+        "override_agdp_usd": data.get("override_agdp_usd", None),
     }

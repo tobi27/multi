@@ -38,6 +38,6 @@ def real_or_synth(price_per_point=150.0, seed=42, epochs=30, lr=0.2):
     else:
         X, y = data
     r = train_logreg_count_flops(X, y, epochs=epochs, lr=lr)
-    value_eur = price_per_point * (r["improvement"]*100.0)
-    r["value_eur"] = value_eur
+    value_usd = price_per_point * (r["improvement"]*100.0)
+    r["value_usd"] = value_usd
     return r
