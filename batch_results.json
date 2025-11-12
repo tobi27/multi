@@ -1,0 +1,108 @@
+{
+  "statistics": {
+    "batch_size": 5,
+    "timestamp": "2025-11-12T14:23:40.542223",
+    "net": {
+      "mean": -71.336,
+      "median": -71.31,
+      "p25": -71.38,
+      "p75": -71.31,
+      "p95": -71.3,
+      "min": -71.38,
+      "max": -71.3,
+      "stdev": 0.040373258476370126
+    },
+    "agdp": {
+      "mean": 750.262033408,
+      "median": 750.1214784
+    },
+    "cri": {
+      "mean": 50009.856,
+      "median": 75010.17,
+      "p50": 75010.17
+    },
+    "gdp_per_pflop": {
+      "p95": 1373818.23
+    },
+    "passed_rate": 0.0,
+    "passed_count": 0,
+    "failed_count": 5
+  },
+  "runs": [
+    {
+      "run_id": "25d8ec23-a9b2-48fc-839a-f4cfea950d57",
+      "agent_net_usd": -71.38,
+      "agdp_usd": 750.4904128,
+      "compute_cost_usd": 0.06,
+      "cri": 12508.17,
+      "gdp_per_pflop_usd": 284994.35,
+      "total_flops": 2633351871600,
+      "tokens_used": 545,
+      "passed": false,
+      "premium_usd": 11.29,
+      "claim_usd": 525.34,
+      "improvement": 0.0,
+      "receipt": "ffbb0f1d3ad0cb9b89e6674851076623fe5718e89a8b34f5a98b542224605cfa"
+    },
+    {
+      "run_id": "9b938d95-1dbc-43dd-b7a2-971056ba2f39",
+      "agent_net_usd": -71.3,
+      "agdp_usd": 750.10618112,
+      "compute_cost_usd": 0.01,
+      "cri": 75010.62,
+      "gdp_per_pflop_usd": 1315613.49,
+      "total_flops": 570156956784,
+      "tokens_used": 118,
+      "passed": false,
+      "premium_usd": 11.28,
+      "claim_usd": 525.07,
+      "improvement": 0.0,
+      "receipt": "55de10097abaf9a861c03e64c8e7f4a0d70c44ddd33cdce3a9619c6f3b9e5981"
+    },
+    {
+      "run_id": "1bd1fb51-b5af-4791-9324-016004002734",
+      "agent_net_usd": -71.31,
+      "agdp_usd": 750.10168192,
+      "compute_cost_usd": 0.01,
+      "cri": 75010.17,
+      "gdp_per_pflop_usd": 1373818.23,
+      "total_flops": 545997765744,
+      "tokens_used": 113,
+      "passed": false,
+      "premium_usd": 11.28,
+      "claim_usd": 525.07,
+      "improvement": 0.0,
+      "receipt": "31a79a1f6730c2d18931858ceddc9a1b788bf450a16ec611a28e15333fe05dd3"
+    },
+    {
+      "run_id": "8f869cec-215b-4305-ac27-f590927d899e",
+      "agent_net_usd": -71.31,
+      "agdp_usd": 750.1214784,
+      "compute_cost_usd": 0.01,
+      "cri": 75012.15,
+      "gdp_per_pflop_usd": 1149967.1,
+      "total_flops": 652298206320,
+      "tokens_used": 135,
+      "passed": false,
+      "premium_usd": 11.28,
+      "claim_usd": 525.09,
+      "improvement": 0.0,
+      "receipt": "f66d34a0d9ecee4a81507be393ca844607a6f408b4806cd283ed804c7192d700"
+    },
+    {
+      "run_id": "5de02113-349a-4406-8ad8-5513d4dc2139",
+      "agent_net_usd": -71.38,
+      "agdp_usd": 750.4904128,
+      "compute_cost_usd": 0.06,
+      "cri": 12508.17,
+      "gdp_per_pflop_usd": 284994.35,
+      "total_flops": 2633351871600,
+      "tokens_used": 545,
+      "passed": false,
+      "premium_usd": 11.29,
+      "claim_usd": 525.34,
+      "improvement": 0.0,
+      "receipt": "c7d97562877fa1674d6bc32831d9cde46129bc69921772c1a815ff04c4792256"
+    }
+  ]
+}
