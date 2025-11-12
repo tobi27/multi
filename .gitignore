@@ -33,6 +33,10 @@ env/
 proofs.sqlite
 *.db
 
+# Generated results
+batch_results.json
+darwin_results.json
+
 # IDE
 .vscode/
 .idea/
