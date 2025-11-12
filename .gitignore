@@ -25,6 +25,10 @@ venv/
 ENV/
 env/
 
+# Secrets
+.env
+.agent_ed25519.json
+
 # Generated databases
 proofs.sqlite
 *.db
