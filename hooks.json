@@ -1,0 +1,9 @@
+{
+  "before-tool": [
+    {"match":"Terminal: .*rm -rf.*","action":"block","message":"Suppression bloquée par hook."},
+    {"match":"Terminal: pip install .*","action":"confirm","message":"Confirmer installation ?"}
+  ],
+  "after-tool": [
+    {"match":"Terminal: python run_graph.py","action":"note","message":"Capture SUMMARY + RECEIPT + SIG + IDs externes."}
+  ]
+}

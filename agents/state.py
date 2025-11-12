@@ -1,149 +1,99 @@
-"""
-Graph state definition for Sovereign MVP.
-"""
-import time
-import hashlib
-import json
-from typing import List
 from pydantic import BaseModel, Field
-
+from typing import List, Optional, Dict
+import time, uuid, os, json
+from .store import save_ledger
+from .crypto import sign_ledger, sha256_hex
 
 class ActionRecord(BaseModel):
-    """Single action record."""
     kind: str
-    details: dict = Field(default_factory=dict)
+    details: Dict
     flops: int = 0
     value_eur: float = 0.0
 
-
 class GraphState(BaseModel):
-    """Main state for the Sovereign agent pipeline."""
-
-    # Identity
-    run_id: str = ""
-    agent_id: str = "agent_001"
-
-    # Economics
+    ts: int = Field(default_factory=lambda: int(time.time()))
+    run_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    agent_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    trust_score: int = int(os.getenv("TRUST_SCORE", "812"))
+    price_per_point: float = float(os.getenv("PRICE_PER_POINT","150"))
+    take_rate: float = float(os.getenv("TAKE_RATE","0.15"))
+    base_premium_rate: float = float(os.getenv("BASE_PREMIUM","0.08"))
+    coverage: float = float(os.getenv("COVERAGE","0.70"))
+    improvement_target: float = float(os.getenv("SLA_TARGET","0.05"))
+    eur_per_token_api: float = float(os.getenv("EUR_PER_TOKEN_API","0.000008"))
+    eur_per_pflop_infra: float = float(os.getenv("EUR_PER_PFLOP_INFRA","20"))
+    contract_hash: str = os.getenv("CONTRACT_HASH","contract_hash_missing")
+    vault_eur: float = 0.0
+    bond_eur: float = 0.0
+    parent_id: Optional[str] = None
+    delegators: Dict = Field(default_factory=dict)
+    loans: List[Dict] = Field(default_factory=list)
+    spawn_params: Dict = Field(default_factory=lambda:{
+        "seed_cost_eur": float(os.getenv("SEED_COST_EUR","150")),
+        "alpha": float(os.getenv("SPAWN_ALPHA","0.4"))
+    })
+    lend_params: Dict = Field(default_factory=lambda:{
+        "principal_eur": float(os.getenv("LEND_PRINCIPAL_EUR","300")),
+        "base": float(os.getenv("LEND_BASE","0.06")),
+        "spread": float(os.getenv("LEND_SPREAD","0.12"))
+    })
+    delegate_params: Dict = Field(default_factory=lambda:{
+        "fee_eur": float(os.getenv("DELEGATE_FEE_EUR","25")),
+        "royalty": float(os.getenv("DELEGATE_ROYALTY","0.08")),
+        "delegate_id": "agent-deleg-1"
+    })
+    actions: List[ActionRecord] = Field(default_factory=list)
+    total_flops: int = 0
+    tokens_used: int = 0
     agdp_eur: float = 0.0
+    compute_cost_eur: float = 0.0
+    platform_revenue_eur: float = 0.0
     premium_eur: float = 0.0
     claim_eur: float = 0.0
-    platform_revenue_eur: float = 0.0
+    royalties_eur: float = 0.0
+    loans_repaid_eur: float = 0.0
     agent_net_eur: float = 0.0
-
-    # Compute
-    total_flops: int = 0
-    total_pflops: float = 0.0
-
-    # Metrics
-    gdp_per_pflop_eur: float = 0.0
-    sla_passed: bool = False
-
-    # Trust
-    trust_score: int = 500  # 0-1000
-
-    # Parameters
-    price_per_point: float = 150.0  # € per percentage point improvement
-
-    # Actions log
-    actions: List[ActionRecord] = Field(default_factory=list)
-
-    # Ledger
-    timestamp: float = 0.0
-    sha256: str = ""
-
-    # External proofs
-    stripe_intents: List[dict] = Field(default_factory=list)
+    gdp_per_pflop_eur: Optional[float] = None
+    cri: Optional[float] = None
+    baseline_acc: Optional[float] = None
+    acc: Optional[float] = None
+    improvement: Optional[float] = None
+    anthropic_usage_id: Optional[str] = None
+    stripe_payment_intent_id: Optional[str] = None
+    receipt: Optional[str] = None
+    signature_b64: Optional[str] = None
+    verify_key_b64: Optional[str] = None
+    passed: Optional[bool] = None
 
     def finalize(self):
-        """
-        Finalize the state:
-        - Compute total PFLOPs
-        - Compute GDP/PFLOP
-        - Generate SHA-256 ledger hash
-        - Call Stripe API (test mode) for take-rate and premium
-        - Persist to SQLite
-        """
-        from .payments import stripe_capture_safe
-        from .store import save_ledger
-
-        # Compute PFLOPs
-        self.total_pflops = self.total_flops / 1e15
-
-        # Compute GDP per PFLOP
-        if self.total_pflops > 0:
-            self.gdp_per_pflop_eur = self.agdp_eur / self.total_pflops
-        else:
-            self.gdp_per_pflop_eur = 0.0
-
-        # Timestamp
-        self.timestamp = time.time()
-
-        # SHA-256 ledger
-        ledger_data = {
-            "run_id": self.run_id,
-            "agent_id": self.agent_id,
-            "agdp_eur": self.agdp_eur,
-            "total_pflops": self.total_pflops,
-            "premium_eur": self.premium_eur,
-            "claim_eur": self.claim_eur,
-            "platform_revenue_eur": self.platform_revenue_eur,
-            "agent_net_eur": self.agent_net_eur,
-            "sla_passed": self.sla_passed,
-            "timestamp": self.timestamp,
-            "actions": [a.model_dump() for a in self.actions]
-        }
-        ledger_json = json.dumps(ledger_data, sort_keys=True)
-        self.sha256 = hashlib.sha256(ledger_json.encode()).hexdigest()
-
-        # Stripe capture (test mode)
-        # 1. Platform take-rate
-        if self.platform_revenue_eur > 0.01:
-            success, result = stripe_capture_safe(
-                self.platform_revenue_eur,
-                f"Platform take-rate | run={self.run_id}"
-            )
-            if success:
-                self.stripe_intents.append({
-                    "type": "take_rate",
-                    "intent_id": result.get("intent_id"),
-                    "amount_eur": result.get("amount_eur")
-                })
-
-        # 2. Insurance premium
-        if self.premium_eur > 0.01:
-            success, result = stripe_capture_safe(
-                self.premium_eur,
-                f"Insurance premium | run={self.run_id}"
-            )
-            if success:
-                self.stripe_intents.append({
-                    "type": "premium",
-                    "intent_id": result.get("intent_id"),
-                    "amount_eur": result.get("amount_eur")
-                })
-
-        # Persist to SQLite
+        pf = self.total_flops / 1e15
+        self.gdp_per_pflop_eur = None if pf==0 else round(self.agdp_eur / pf, 2)
+        self.compute_cost_eur = round(self.tokens_used*self.eur_per_token_api + pf*self.eur_per_pflop_infra, 2)
+        self.cri = None if self.compute_cost_eur<=0 else round(self.agdp_eur / self.compute_cost_eur, 2)
+        self.platform_revenue_eur = round(self.agdp_eur * self.take_rate, 2)
+        premium_rate = self.base_premium_rate * (1 - self.trust_score/1000)
+        self.premium_eur = round(self.agdp_eur * premium_rate, 2)
+        self.claim_eur = 0.0
+        if (self.improvement or 0) < self.improvement_target:
+            self.claim_eur = round(self.agdp_eur * self.coverage, 2)
+        self.royalties_eur = 0.0
+        for d in self.delegators.values(): self.royalties_eur += self.agdp_eur * d["royalty"]
+        self.royalties_eur = round(self.royalties_eur, 2)
+        repay_total = 0.0
+        for ln in self.loans:
+            pay = min(ln["due"], max(0.0, self.agdp_eur*0.15))
+            ln["due"] = round(ln["due"] - pay, 2)
+            repay_total += pay
+        self.loans_repaid_eur = round(repay_total, 2)
+        self.agent_net_eur = round(
+            self.agdp_eur - self.premium_eur - self.claim_eur - self.platform_revenue_eur
+            - self.compute_cost_eur - self.royalties_eur - self.loans_repaid_eur,
+            2
+        )
+        self.passed = bool((self.agent_net_eur > 0) and (self.gdp_per_pflop_eur or 0) > 0)
         payload = self.model_dump()
-        try:
-            save_ledger(self.run_id, payload)
-        except Exception as e:
-            print(f"[WARN] Could not save ledger to SQLite: {e}")
-
-    def summary(self):
-        """Generate a summary dict for display."""
-        return {
-            "RUN_ID": self.run_id,
-            "AGENT_ID": self.agent_id,
-            "AGDP_EUR": f"{self.agdp_eur:.2f}",
-            "TOTAL_PFLOPS": f"{self.total_pflops:.6f}",
-            "GDP_PER_PFLOP": f"{self.gdp_per_pflop_eur:.2f}",
-            "PREMIUM_EUR": f"{self.premium_eur:.2f}",
-            "CLAIM_EUR": f"{self.claim_eur:.2f}",
-            "PLATFORM_REVENUE_EUR": f"{self.platform_revenue_eur:.2f}",
-            "AGENT_NET_EUR": f"{self.agent_net_eur:.2f}",
-            "SLA_PASSED": self.sla_passed,
-            "TRUST_SCORE": self.trust_score,
-            "SHA256": self.sha256[:16] + "...",
-            "STRIPE_INTENTS": len(self.stripe_intents),
-            "N_ACTIONS": len(self.actions)
-        }
+        self.receipt = sha256_hex(payload)
+        sig, vk = sign_ledger(payload)
+        self.signature_b64, self.verify_key_b64 = sig, vk
+        save_ledger(self.run_id, payload)
+        return self

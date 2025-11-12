@@ -1,126 +1,73 @@
-#!/usr/bin/env python3
-"""
-Run the Sovereign MVP pipeline with real data/LLM/payments.
-"""
-import sys
-import uuid
-import json
+import os, json, statistics
+from dotenv import load_dotenv; load_dotenv()
 from langgraph.graph import StateGraph, END
-
 from agents.state import GraphState
-from agents.nodes import producer_node, insurer_node, platform_node, finalize_node
-
+from agents.nodes import (
+    node_identity, node_spawn, node_lend, node_producer, node_insurer,
+    node_monetizer, node_delegate, node_accountant
+)
 
 def build_graph():
-    """Build the LangGraph pipeline."""
-    graph = StateGraph(GraphState)
+    g = StateGraph(GraphState)
+    g.add_node("identity", node_identity)
+    if os.getenv("ENABLE_SPAWN","false").lower()=="true": g.add_node("spawn", node_spawn)
+    if os.getenv("ENABLE_LEND","false").lower()=="true": g.add_node("lend", node_lend)
+    g.add_node("producer", node_producer)
+    g.add_node("insurer", node_insurer)
+    g.add_node("monetizer", node_monetizer)
+    if os.getenv("ENABLE_DELEGATE","false").lower()=="true": g.add_node("delegate", node_delegate)
+    g.add_node("accountant", node_accountant)
 
-    # Add nodes
-    graph.add_node("producer", producer_node)
-    graph.add_node("insurer", insurer_node)
-    graph.add_node("platform", platform_node)
-    graph.add_node("finalize", finalize_node)
+    g.set_entry_point("identity")
+    cur="identity"
+    if os.getenv("ENABLE_SPAWN","false").lower()=="true": g.add_edge(cur,"spawn"); cur="spawn"
+    if os.getenv("ENABLE_LEND","false").lower()=="true": g.add_edge(cur,"lend"); cur="lend"
+    g.add_edge(cur,"producer"); cur="producer"
+    g.add_edge(cur,"insurer"); cur="insurer"
+    g.add_edge(cur,"monetizer"); cur="monetizer"
+    if os.getenv("ENABLE_DELEGATE","false").lower()=="true": g.add_edge(cur,"delegate"); cur="delegate"
+    g.add_edge(cur,"accountant"); g.add_edge("accountant", END)
+    return g.compile()
 
-    # Define edges
-    graph.set_entry_point("producer")
-    graph.add_edge("producer", "insurer")
-    graph.add_edge("insurer", "platform")
-    graph.add_edge("platform", "finalize")
-    graph.add_edge("finalize", END)
+def summary(o: GraphState):
+    print(json.dumps(o.model_dump(), indent=2))
+    print("\nSUMMARY:")
+    print(f"AGDP €={o.agdp_eur:.2f} | PFLOPs={o.total_flops/1e15:.6e} | GDP/PFLOP €={o.gdp_per_pflop_eur}")
+    print(f"ComputeCost €={o.compute_cost_eur} | CRI={o.cri}")
+    print(f"Premium={o.premium_eur} | Claim={o.claim_eur} | TakeRate={o.platform_revenue_eur}")
+    print(f"Royalties={o.royalties_eur} | LoanRepay={o.loans_repaid_eur}")
+    print(f"NET €={o.agent_net_eur} | PASSED={o.passed}")
+    print(f"RECEIPT={o.receipt[:16]}… | SIG={(o.signature_b64 or '')[:12]}…")
+    print(f"AnthropicUsageID={o.anthropic_usage_id} | StripePI={o.stripe_payment_intent_id}")
 
-    return graph.compile()
-
-
-def main():
-    """Main execution."""
-    print("=" * 60)
-    print("SOVEREIGN MVP - REAL DATA PIPELINE")
-    print("=" * 60)
-
-    # Create initial state
-    run_id = str(uuid.uuid4())[:8]
-    initial_state = GraphState(run_id=run_id)
-
-    print(f"Run ID: {run_id}")
-    print(f"Agent ID: {initial_state.agent_id}")
-    print(f"Trust Score: {initial_state.trust_score}")
-    print()
-
-    # Build and run graph
-    print("Building pipeline...")
+def run_once():
     app = build_graph()
-
-    print("Executing pipeline...")
-    print("-" * 60)
-
-    result = app.invoke(initial_state)
-
-    # LangGraph returns a dict, convert back to GraphState
+    st = GraphState()
+    result = app.invoke(st)
     if isinstance(result, dict):
-        final_state = GraphState(**result)
+        out = GraphState(**result)
     else:
-        final_state = result
+        out = result
+    summary(out)
 
-    print("-" * 60)
-    print("\n")
-    print("=" * 60)
-    print("SUMMARY")
-    print("=" * 60)
+def run_parallel(N=30):
+    app = build_graph()
+    nets, gdp_pflops, cris = [], [], []
+    for _ in range(N):
+        result = app.invoke(GraphState())
+        if isinstance(result, dict):
+            out = GraphState(**result)
+        else:
+            out = result
+        nets.append(out.agent_net_eur)
+        if out.gdp_per_pflop_eur is not None: gdp_pflops.append(out.gdp_per_pflop_eur)
+        if out.cri is not None: cris.append(out.cri)
+    p50_net = statistics.median(nets)
+    p95_net = sorted(nets)[int(0.95*len(nets))-1]
+    p50_cri = statistics.median(cris) if cris else None
+    p95_gdpp = sorted(gdp_pflops)[int(0.95*len(gdp_pflops))-1] if gdp_pflops else None
+    print(f"\nPARALLEL N={N}: p50(NET)={p50_net:.2f} | p95(NET)={p95_net:.2f} | p50(CRI)={p50_cri} | p95(GDP/PFLOP)={p95_gdpp}")
 
-    summary = final_state.summary()
-    for key, value in summary.items():
-        print(f"{key:25s}: {value}")
-
-    print()
-    print("=" * 60)
-    print("DETAILED ACTIONS")
-    print("=" * 60)
-
-    for i, action in enumerate(final_state.actions, 1):
-        print(f"\n{i}. {action.kind}")
-        print(f"   FLOPs: {action.flops:,}")
-        print(f"   Value: €{action.value_eur:.2f}")
-        if action.details:
-            print(f"   Details: {json.dumps(action.details, indent=6)}")
-
-    print()
-    print("=" * 60)
-    print("LEDGER RECEIPT")
-    print("=" * 60)
-    print(f"Run ID: {final_state.run_id}")
-    print(f"SHA-256: {final_state.sha256}")
-    print(f"Timestamp: {final_state.timestamp}")
-    print(f"Stripe Intents: {len(final_state.stripe_intents)}")
-
-    for intent in final_state.stripe_intents:
-        print(f"  - {intent['type']}: {intent.get('intent_id', 'N/A')} "
-              f"(€{intent.get('amount_eur', 0):.2f})")
-
-    print()
-    print("=" * 60)
-    print("VALIDATION")
-    print("=" * 60)
-
-    if final_state.sla_passed:
-        print("✓ SLA PASSED")
-    else:
-        print("✗ SLA FAILED (claim triggered)")
-
-    if final_state.agent_net_eur > 0:
-        print(f"✓ Agent NET positive: €{final_state.agent_net_eur:.2f}")
-    else:
-        print(f"✗ Agent NET negative: €{final_state.agent_net_eur:.2f}")
-
-    print()
-    print("Ledger saved to: proofs.sqlite")
-    print()
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        print(f"\n[ERROR] {e}", file=sys.stderr)
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+if __name__=="__main__":
+    run_once()
+    # run_parallel(30)

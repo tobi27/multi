@@ -1,0 +1,9 @@
+{
+  "commands": [
+    {"name":"install-deps","prompt":"Terminal: pip install -r requirements.txt","description":"Installe les dépendances"},
+    {"name":"run-proof","prompt":"Terminal: python run_graph.py","description":"1 run (SUMMARY + ledger + IDs)"},
+    {"name":"run-parallel","prompt":"Édite run_graph.py pour set N=30 puis Terminal: python run_graph.py","description":"30 runs → p50/p95 + CRI"},
+    {"name":"run-real","prompt":"Terminal: ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY STRIPE_SECRET_TEST=$STRIPE_SECRET_TEST python run_graph.py","description":"Force real mode"},
+    {"name":"cloud-memory-update","prompt":"Nettoie/compacte cloud.md et agents/cloud.md (<150 lignes), conserve règles clés, supprime redondances.","description":"Optimise mémoire Claude"}
+  ]
+}
