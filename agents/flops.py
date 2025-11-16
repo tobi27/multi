@@ -1,6 +1,13 @@
 import os, csv, json, numpy as np
 
+# Cache pour éviter de recharger CSV à chaque run
+_DATA_CACHE = None
+
 def load_real_data(path="data/events.csv"):
+    global _DATA_CACHE
+    if _DATA_CACHE is not None:
+        return _DATA_CACHE
+
     if not os.path.exists(path): return None
     X, y = [], []
     with open(path, newline="") as f:
@@ -10,7 +17,8 @@ def load_real_data(path="data/events.csv"):
             X.append([float(v) for v in feats.values()])
             y.append(int(row["label"]))
     X = np.array(X, dtype=float); y = np.array(y, dtype=int)
-    return X, y
+    _DATA_CACHE = (X, y)
+    return _DATA_CACHE
 
 def train_logreg_count_flops(X, y, epochs=30, lr=0.2):
     n, d = X.shape

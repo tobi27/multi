@@ -5,6 +5,7 @@ Darwinian Engine + mini-MARL (UCB) for adaptive token allocation.
 import os
 import json
 import statistics
+import logging
 from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
@@ -18,8 +19,23 @@ from agents.nodes import (
 from agents.darwin import fitness, thermostat_adjust, apply_thermostat, allocate_tokens
 from agents.bandit import UCB, gen_variants
 
+# Logging structuré
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger("darwin")
+
+# Cache du graph compilé pour éviter rebuild
+_COMPILED_GRAPH = None
 
 def build_graph():
+    global _COMPILED_GRAPH
+    if _COMPILED_GRAPH is not None:
+        return _COMPILED_GRAPH
+
+    logger.info("Building LangGraph pipeline...")
     g = StateGraph(GraphState)
     g.add_node("identity", node_identity)
     if os.getenv("ENABLE_SPAWN","false").lower()=="true": g.add_node("spawn", node_spawn)
@@ -39,7 +55,10 @@ def build_graph():
     g.add_edge(cur,"monetizer"); cur="monetizer"
     if os.getenv("ENABLE_DELEGATE","false").lower()=="true": g.add_edge(cur,"delegate"); cur="delegate"
     g.add_edge(cur,"accountant"); g.add_edge("accountant", END)
-    return g.compile()
+
+    _COMPILED_GRAPH = g.compile()
+    logger.info("Graph compiled and cached ✓")
+    return _COMPILED_GRAPH
 
 
 def run_darwin(export_file="darwin_results.json"):
@@ -90,31 +109,47 @@ def run_darwin(export_file="darwin_results.json"):
 
         for i, arm in enumerate(arms):
             print(f"\n[{i+1}/{P}] Arm: {arm} | Quota: {quotas[i]:,} tokens", end=" ")
+            logger.info(f"Round {round_idx+1}/{R}, Agent {i+1}/{P}: quota={quotas[i]:,}, arm={arm}")
 
-            # Override state params with arm variant
-            state_init = GraphState()
-            state_init.quota_tokens = quotas[i]
+            try:
+                # Override state params with arm variant
+                state_init = GraphState()
+                state_init.quota_tokens = quotas[i]
 
-            # Apply arm variants
-            if "price_mul" in arm:
-                state_init.price_per_point *= arm["price_mul"]
-            if "coverage_mul" in arm:
-                state_init.coverage *= arm["coverage_mul"]
+                # Apply arm variants
+                if "price_mul" in arm:
+                    state_init.price_per_point *= arm["price_mul"]
+                if "coverage_mul" in arm:
+                    state_init.coverage *= arm["coverage_mul"]
 
-            # Run agent
-            result = app.invoke(state_init)
-            if isinstance(result, dict):
-                out = GraphState(**result)
-            else:
-                out = result
+                # Run agent
+                result = app.invoke(state_init)
+                if isinstance(result, dict):
+                    out = GraphState(**result)
+                else:
+                    out = result
 
-            # Calculate fitness
-            eta = fitness(out)
-            out.fitness_eta = eta
+                # Calculate fitness
+                eta = fitness(out)
+                out.fitness_eta = eta
 
-            # Update UCB
-            arm_str = json.dumps(arm, sort_keys=True)
-            ucb.update(arm_str, eta)
+                # Update UCB
+                arm_str = json.dumps(arm, sort_keys=True)
+                ucb.update(arm_str, eta)
+
+            except Exception as e:
+                logger.error(f"Agent {i+1}/{P} failed: {e}", exc_info=True)
+                # Fallback: create dummy result with minimal values
+                out = GraphState()
+                out.agent_net_usd = -100.0
+                out.agdp_usd = 0.0
+                out.compute_cost_usd = 1.0
+                out.cri = 0.0
+                eta = 0.1  # Very low fitness
+                out.fitness_eta = eta
+                arm_str = json.dumps(arm, sort_keys=True)
+                ucb.update(arm_str, eta)
+                logger.warning(f"Using fallback result for failed agent")
 
             # Store results
             run_data = {
